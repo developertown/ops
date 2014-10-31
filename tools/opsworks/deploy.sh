@@ -27,7 +27,7 @@ die () {
 
 deployment_status () {
   DEPLOYMENT_STATUS=$(
-    aws opsworks describe-deployments \
+    aws opsworks --region us-east-1 describe-deployments \
     --deployment-id="$1" \
     --query "Deployments[0].Status" \
     | \
