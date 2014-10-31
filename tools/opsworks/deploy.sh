@@ -37,7 +37,8 @@ deployment_status () {
 
 STACK_NAME=${STACK_NAME:-$1}
 APP_NAME=${APP_NAME:-$2}
-DEPLOYMENT_COMMENT=${DEPLOYMENT_COMMENT:-${3:-Automated\ deployment\ \(script\ version:\ $SCRIPT_VERSION\)}}
+DEPLOYMENT_COMMENT=${DEPLOYMENT_COMMENT:-${3:-Automated\ deployment}}
+DEPLOYMENT_COMMENT="$DEPLOYMENT_COMMENT (script version: $SCRIPT_VERSION)"
 
 if [ -z "$STACK_NAME" ]; then
   die "STACK_NAME is required, either via the environment or the first argument"
