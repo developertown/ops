@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #                                     
 #  _____         _ _ _         _       
@@ -23,6 +23,16 @@ SCRIPT_VERSION=1.0.0
 die () {
   echo >&2 "$@"
   exit 1
+}
+
+deployment_status () {
+  DEPLOYMENT_STATUS=$(
+    aws opsworks describe-deployments \
+    --deployment-id="$1" \
+    --query "Deployments[0].Status" \
+    | \
+    grep -oE "successful|running|failed"
+  )
 }
 
 STACK_NAME=${STACK_NAME:-$1}
@@ -79,4 +89,26 @@ if [ -z "$DEPLOYMENT_ID" ]; then
   die "The deploy was unsuccessful for App $APP_NAME on Stack $STACK_NAME"
 fi
 
-echo "Successfully created deployment $DEPLOYMENT_ID"
+echo "Successfully created deployment $DEPLOYMENT_ID, beginning to monitor"
+
+deployment_status $DEPLOYMENT_ID
+
+if [ -z "$DEPLOYMENT_STATUS" ]; then
+  die "Unable to retrieve the deployment status, or it was not one of successful, running, or failed"
+fi
+
+while [ $DEPLOYMENT_STATUS = "running" ]; do
+  echo -n "."
+  sleep 10s
+  deployment_status $DEPLOYMENT_ID
+done
+
+echo ""
+
+if [ -z "$DEPLOYMENT_STATUS" ]; then
+  die "An error occurred detecting the status of the current deployment"
+elif [ "$DEPLOYMENT_STATUS" = "failed" ]; then
+  die "The deploy for app $APP_NAME failed"
+else
+  echo "The deploy for app $APP_NAME was successful"
+fi
