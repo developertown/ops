@@ -1,22 +1,24 @@
 #!/bin/bash
 
-#                                     
-#  _____         _ _ _         _       
-# |     |___ ___| | | |___ ___| |_ ___ 
+#
+#  _____         _ _ _         _
+# |     |___ ___| | | |___ ___| |_ ___
 # |  |  | . |_ -| | | | . |  _| '_|_ -|
 # |_____|  _|___|_____|___|_| |_,_|___|
-#       |_|                            
-#                                    
-#  ____          _                     
-# |    \ ___ ___| |___ _ _ ___ ___     
-# |  |  | -_| . | | . | | | -_|  _|    
-# |____/|___|  _|_|___|_  |___|_|      
-#           |_|       |___|            
+#       |_|
+#
+#  ____          _
+# |    \ ___ ___| |___ _ _ ___ ___
+# |  |  | -_| . | | . | | | -_|  _|
+# |____/|___|  _|_|___|_  |___|_|
+#           |_|       |___|
 #
 #
-#  A simple script to deploy an 
+#  A simple script to deploy an
 #  app instance on OpsWorks.
 #
+set -euo pipefail
+IFS=$'\n\t'
 
 # The current version of this script
 SCRIPT_VERSION=1.0.0
@@ -45,10 +47,12 @@ deployment_status () {
   )
 }
 
+set +u
 STACK_NAME=${STACK_NAME:-$1}
 APP_NAME=${APP_NAME:-$2}
 DEPLOYMENT_COMMENT=${DEPLOYMENT_COMMENT:-${3:-Automated\ deployment}}
 DEPLOYMENT_COMMENT="$DEPLOYMENT_COMMENT (script version: $SCRIPT_VERSION)"
+set -u
 
 if [ -z "$STACK_NAME" ]; then
   usage
@@ -64,7 +68,7 @@ fi
 hash aws 2>/dev/null || die "Unable to find the aws CLI, ensure it is installed (e.g. pip install aws)"
 
 # A quick note about the aws opsworks commands below:
-# The result of the command is a JSON document, which is being 
+# The result of the command is a JSON document, which is being
 # queried/filtered using the JMESPath expressions.
 # If the expressions do not match, an empty result set is returned,
 # and if they do match, a result set containing the matched value is
@@ -102,7 +106,7 @@ if [ -z "$APP_ID" ]; then
   die "Unable to retrieve the App ID for $APP_NAME on Stack $STACK_NAME"
 fi
 
-# Issue a deploy for the stack and app, 
+# Issue a deploy for the stack and app,
 # defaulting to deploy across all instances in the layer
 
 DEPLOYMENT_ID=$(
