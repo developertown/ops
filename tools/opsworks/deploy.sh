@@ -18,16 +18,26 @@
 #  app instance on OpsWorks.
 #
 
+# The current version of this script
 SCRIPT_VERSION=1.0.0
+
+# Opsworks API calls are all made to the us-east-1 region
+# See: http://docs.aws.amazon.com/cli/latest/reference/opsworks/index.html
+AWS_OPSWORKS_REGION=us-east-1
 
 die () {
   echo >&2 "$@"
   exit 1
 }
 
+usage () {
+  echo "usage: $0 [stack-name] [app-name]"
+  echo "usage: STACK_NAME=stack-name APP_NAME=app-name $0"
+}
+
 deployment_status () {
   DEPLOYMENT_STATUS=$(
-    aws opsworks --region us-east-1 describe-deployments \
+    aws opsworks --region="$AWS_OPSWORKS_REGION" describe-deployments \
     --deployment-id="$1" \
     --query "Deployments[0].Status" \
     | \
@@ -41,16 +51,22 @@ DEPLOYMENT_COMMENT=${DEPLOYMENT_COMMENT:-${3:-Automated\ deployment}}
 DEPLOYMENT_COMMENT="$DEPLOYMENT_COMMENT (script version: $SCRIPT_VERSION)"
 
 if [ -z "$STACK_NAME" ]; then
-  die "STACK_NAME is required, either via the environment or the first argument"
+  usage
+  die "A stack name is required"
 fi
 
 if [ -z "$APP_NAME" ]; then
-  die "APP_NAME is required, either via the environment or the second argument"
+  usage
+  die "An app name is required"
 fi
+
+# Verify that aws is available in the PATH
+hash aws 2>/dev/null || die "Unable to find the aws CLI, ensure it is installed (e.g. pip install aws)"
+
 
 # Retrieve the Stack ID for the named stack
 STACK_ID=$(
-  aws opsworks --region us-east-1 describe-stacks \
+  aws opsworks --region="$AWS_OPSWORKS_REGION" describe-stacks \
   --query "Stacks[?Name == \`$STACK_NAME\`].StackId" \
   | \
   grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
@@ -62,7 +78,7 @@ fi
 
 # Retrieve the App ID for the named app
 APP_ID=$(
-  aws opsworks --region us-east-1 describe-apps \
+  aws opsworks --region="$AWS_OPSWORKS_REGION" describe-apps \
   --stack-id="$STACK_ID" \
   --query "Apps[?Name == \`$APP_NAME\`].AppId" \
   | \
@@ -77,7 +93,7 @@ fi
 # defaulting to deploy across all instances in the layer
 
 DEPLOYMENT_ID=$(
-  aws opsworks --region us-east-1 create-deployment \
+  aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
   --stack-id="$STACK_ID" \
   --app-id="$APP_ID" \
   --command='{"Name": "deploy", "Args": { "migrate": ["true"] } }' \
