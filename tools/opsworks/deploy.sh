@@ -63,6 +63,19 @@ fi
 # Verify that aws is available in the PATH
 hash aws 2>/dev/null || die "Unable to find the aws CLI, ensure it is installed (e.g. pip install aws)"
 
+# A quick note about the aws opsworks commands below:
+# The result of the command is a JSON document, which is being 
+# queried/filtered using the JMESPath expressions.
+# If the expressions do not match, an empty result set is returned,
+# and if they do match, a result set containing the matched value is
+# returned. Something like:
+#     [
+#         "b8005517-60c2-4600-a1cd-258e4d67e26e"
+#     ]
+#
+# The grep commands are used solely to retrieve the actual unquoted value
+# out of that result set. They are not used to process the actual JSON document.
+
 
 # Retrieve the Stack ID for the named stack
 STACK_ID=$(
