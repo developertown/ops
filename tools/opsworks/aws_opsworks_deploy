@@ -17,7 +17,7 @@
 #  A simple script to deploy an
 #  app instance on OpsWorks.
 #
-set -euo pipefail
+set -uo pipefail
 IFS=$'\n\t'
 
 # The current version of this script
@@ -33,8 +33,8 @@ die () {
 }
 
 usage () {
-  echo "usage: $0 [stack-name] [app-name]"
-  echo "usage: STACK_NAME=stack-name APP_NAME=app-name $0"
+  echo "usage: $0 stack-name app-name"
+  echo "usage: STACK_NAME=stack-name APP_NAME=app-name DEPLOYMENT_COMMENT=comment INSTANCE_NAMES=instance1,instance2 $0"
 }
 
 deployment_status () {
@@ -50,8 +50,9 @@ deployment_status () {
 set +u
 STACK_NAME=${STACK_NAME:-$1}
 APP_NAME=${APP_NAME:-$2}
-DEPLOYMENT_COMMENT=${DEPLOYMENT_COMMENT:-${3:-Automated\ deployment}}
-DEPLOYMENT_COMMENT="$DEPLOYMENT_COMMENT (script version: $SCRIPT_VERSION)"
+INSTANCE_NAMES=${INSTANCE_NAMES:-''}
+INSTANCE_IDS=""
+DEPLOYMENT_COMMENT="${DEPLOYMENT_COMMENT:-"Automated deployment"} (script version: $SCRIPT_VERSION)"
 set -u
 
 if [ -z "$STACK_NAME" ]; then
@@ -106,18 +107,55 @@ if [ -z "$APP_ID" ]; then
   die "Unable to retrieve the App ID for $APP_NAME on Stack $STACK_NAME"
 fi
 
+# If instance names were provided, find them and restrict the deployment
+# to just these instances.
+if [ -n "$INSTANCE_NAMES" ]; then
+  # For each instance name, comma separated, get an instance id
+  ORIG_IFS=$IFS
+  IFS=','
+  for instance_name in $INSTANCE_NAMES
+  do
+    INSTANCE_ID=$(
+      aws opsworks --region="$AWS_OPSWORKS_REGION" describe-instances \
+      --stack-id="$STACK_ID" \
+      --query "Instances[?Hostname == \`$instance_name\`].InstanceId" \
+      | \
+      grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
+    )
+    if [ -n "$INSTANCE_ID" ]; then
+      INSTANCE_IDS="$INSTANCE_IDS \"$INSTANCE_ID\""
+    else
+      die "Instance named '$instance_name' was not found"
+    fi
+  done
+  IFS=$ORIG_IFS
+fi
+
 # Issue a deploy for the stack and app,
 # defaulting to deploy across all instances in the layer
 
-DEPLOYMENT_ID=$(
-  aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
-  --stack-id="$STACK_ID" \
-  --app-id="$APP_ID" \
-  --command='{"Name": "deploy", "Args": { "migrate": ["true"] } }' \
-  --comment="$DEPLOYMENT_COMMENT" \
-  | \
-  grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
-)
+if [ -n "$INSTANCE_IDS" ]; then
+  DEPLOYMENT_ID=$(
+    aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
+    --stack-id="$STACK_ID" \
+    --app-id="$APP_ID" \
+    --command='{"Name": "deploy", "Args": { "migrate": ["true"] } }' \
+    --comment="$DEPLOYMENT_COMMENT" \
+    --instance-ids $INSTANCE_IDS
+    | \
+    grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
+  )
+else
+  DEPLOYMENT_ID=$(
+    aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
+    --stack-id="$STACK_ID" \
+    --app-id="$APP_ID" \
+    --command='{"Name": "deploy", "Args": { "migrate": ["true"] } }' \
+    --comment="$DEPLOYMENT_COMMENT" \
+    | \
+    grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
+  )
+fi
 
 if [ -z "$DEPLOYMENT_ID" ]; then
   die "The deploy was unsuccessful for App $APP_NAME on Stack $STACK_NAME"
