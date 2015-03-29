@@ -35,6 +35,7 @@ die () {
 usage () {
   echo "usage: $0 [stack-name] [app-name]"
   echo "usage: STACK_NAME=stack-name APP_NAME=app-name $0"
+  echo "options: MIGRATE=true|false (default: true)"
 }
 
 deployment_status () {
@@ -52,6 +53,7 @@ STACK_NAME=${STACK_NAME:-$1}
 APP_NAME=${APP_NAME:-$2}
 DEPLOYMENT_COMMENT=${DEPLOYMENT_COMMENT:-${3:-Automated\ deployment}}
 DEPLOYMENT_COMMENT="$DEPLOYMENT_COMMENT (script version: $SCRIPT_VERSION)"
+MIGRATE=${MIGRATE:-true}
 set -u
 
 if [ -z "$STACK_NAME" ]; then
@@ -113,7 +115,7 @@ DEPLOYMENT_ID=$(
   aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
   --stack-id="$STACK_ID" \
   --app-id="$APP_ID" \
-  --command='{"Name": "deploy", "Args": { "migrate": ["true"] } }' \
+  --command='{"Name": "deploy", "Args": { "migrate": ["$MIGRATE"] } }' \
   --comment="$DEPLOYMENT_COMMENT" \
   | \
   grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
