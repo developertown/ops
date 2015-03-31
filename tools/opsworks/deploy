@@ -110,6 +110,7 @@ fi
 
 # Issue a deploy for the stack and app,
 # defaulting to deploy across all instances in the layer
+echo "Performing deployment with MIGRATE=$MIGRATE"
 
 DEPLOYMENT_ID=$(
   aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
