@@ -116,7 +116,7 @@ DEPLOYMENT_ID=$(
   aws opsworks --region="$AWS_OPSWORKS_REGION" create-deployment \
   --stack-id="$STACK_ID" \
   --app-id="$APP_ID" \
-  --command='{"Name": "deploy", "Args": { "migrate": ["$MIGRATE"] } }' \
+  --command="{\"Name\": \"deploy\", \"Args\": { \"migrate\": [\"$MIGRATE\"] } }" \
   --comment="$DEPLOYMENT_COMMENT" \
   | \
   grep -o "\\w\{8\}-\\w\{4\}-\\w\{4\}-\\w\{4\}-\\w\{12\}"
